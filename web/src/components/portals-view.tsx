@@ -6,6 +6,8 @@ import { Loader2, Radar, Wrench } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
 import { useJobs, type Job } from "@/components/jobs/job-store";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/i18n/language-provider";
+import type { MsgKey } from "@/lib/i18n/messages";
 
 type Company = { name: string; status: string; detail: string };
 type Result = { available: boolean; configured: boolean; companies: Company[] };
@@ -19,6 +21,7 @@ const TONE: Record<string, { dot: string; label: string; chip: string }> = {
 const ORDER: Record<string, number> = { broken: 0, empty: 1, live: 2, skipped: 3 };
 
 export function PortalsView() {
+  const { t } = useT();
   const [res, setRes] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
   const { jobs, startJob } = useJobs();
@@ -50,6 +53,14 @@ export function PortalsView() {
 
   return (
     <div>
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <Radar className="size-6 text-brand" />
+          <h1 className="font-display text-2xl tracking-tight text-landing">{t("portals.title")}</h1>
+        </div>
+        <p className="mt-1.5 max-w-xl text-sm text-muted">{t("portals.lead")}</p>
+        <p className="mt-1.5 text-xs text-faint">{t("portals.backed")}</p>
+      </div>
       <div className="flex items-center gap-3">
         <button
           onClick={check}
@@ -57,29 +68,26 @@ export function PortalsView() {
           className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200 disabled:opacity-50 max-sm:min-h-[44px]"
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : <Radar className="size-4" />}
-          Check portal health
+          {t("portals.check")}
         </button>
-        {loading && <span className="text-xs text-faint">Probing each company&apos;s ATS… (~30–60s)</span>}
+        {loading && <span className="text-xs text-faint">{t("portals.probing")}</span>}
       </div>
 
       {res && !res.available && (
         <p className="mt-4 rounded-xl border border-dashed border-border bg-surface/30 p-4 text-sm text-muted">
-          <code className="text-foreground">verify-portals.mjs</code> not found — this needs a complete career-ops
-          checkout (the web orchestrates the core&apos;s validator).
+          {t("portals.missingScript")}
         </p>
       )}
       {res && res.available && !res.configured && (
         <p className="mt-4 rounded-xl border border-dashed border-border bg-surface/30 p-4 text-sm text-muted">
-          No <code className="text-foreground">portals.yml</code> yet — ask the assistant to set up the companies to scan.
+          {t("portals.noYml")}
         </p>
       )}
 
       {res && res.configured && (
         <div className="mt-5">
           <p className="text-sm text-muted">
-            <span className="tabular-nums text-emerald-600 dark:text-emerald-400">{liveN}</span> live ·{" "}
-            <span className="tabular-nums text-red-600 dark:text-red-400">{broken.length}</span> broken ·{" "}
-            <span className="tabular-nums">{companies.length}</span> tracked
+            {t("portals.summary", { live: liveN, broken: broken.length })}
           </p>
           {broken.length > 0 && (
             <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm">
@@ -95,16 +103,17 @@ export function PortalsView() {
           )}
           <ul className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface/40">
             {sorted.map((c) => {
-              const t = TONE[c.status] ?? TONE.skipped;
+              const tone = TONE[c.status] ?? TONE.skipped;
+              const toneKey = (`portals.tone.${c.status}` as MsgKey);
               return (
                 <li key={c.name} className="flex items-center gap-3 px-4 py-2.5">
                   <CompanyLogo name={c.name} size={20} />
-                  <span className={cn("size-1.5 shrink-0 rounded-full", t.dot)} />
+                  <span className={cn("size-1.5 shrink-0 rounded-full", tone.dot)} />
                   <span className="shrink-0 text-sm font-medium">{c.name}</span>
                   <span className="truncate font-mono text-xs text-faint">{c.detail}</span>
                   <div className="ml-auto flex shrink-0 items-center gap-2">
                     {c.status === "broken" && <FixAffordance company={c.name} job={fixByCompany.get(c.name)} onFix={() => startJob({ title: `Fix · ${c.name}`, subtitle: "repair portal slug", kind: "fix-portal", input: c.name, page: "/portals" })} />}
-                    <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", t.chip)}>{t.label}</span>
+                    <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", tone.chip)}>{t(toneKey, tone.label)}</span>
                   </div>
                 </li>
               );

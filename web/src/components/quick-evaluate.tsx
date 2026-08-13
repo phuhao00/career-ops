@@ -1,27 +1,39 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useJobs } from "@/components/jobs/job-store";
 import { CostBadge } from "@/components/cost/cost-badge";
+import { classifyInput } from "@/lib/eval-pipeline.mjs";
+import { useT } from "@/components/i18n/language-provider";
+import type { MsgKey } from "@/lib/i18n/messages";
 
-// Auto-pipeline, one click: paste a job URL → fire a real evaluation worker
-// (the same kind:"evaluate" that runs modes/oferta.md + writes the A–F report +
-// tracker row). The worker pills + assistant cards show progress.
+// Compact launcher on Today: paste a job URL (or a short JD) → fire the real
+// evaluate worker and jump to /evaluate so the six-step pipeline is visible.
 export function QuickEvaluate() {
+  const router = useRouter();
   const { startJob } = useJobs();
+  const { t } = useT();
   const [url, setUrl] = useState("");
   const [hint, setHint] = useState("");
 
   function run() {
-    const u = url.trim();
-    if (!/^https?:\/\//i.test(u)) {
-      setHint("Paste a full job-posting URL (https://…).");
+    const parsed = classifyInput(url);
+    if (!parsed.ok) {
+      setHint(t(`eval.err.${parsed.code}` as MsgKey));
       return;
     }
-    startJob({ title: "Evaluate · pasted URL", subtitle: u, kind: "evaluate", input: u, page: "/" });
+    startJob({
+      title: parsed.mode === "url" ? t("eval.jobTitleUrl") : t("eval.jobTitleJd"),
+      subtitle: parsed.mode === "url" ? parsed.value.split(/\s+/, 1)[0] : t("eval.subtitleJd"),
+      kind: "evaluate",
+      input: parsed.value,
+      page: "/evaluate",
+    });
     setUrl("");
-    setHint("Evaluating — watch it in the Workers tray.");
+    router.push("/evaluate");
   }
 
   return (
@@ -37,19 +49,25 @@ export function QuickEvaluate() {
           onKeyDown={(e) => {
             if (e.key === "Enter") run();
           }}
-          placeholder="Paste a job URL to evaluate…"
+          placeholder={t("quick.placeholder")}
           className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none placeholder:text-faint"
         />
         <button
           onClick={run}
-          className="shrink-0 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200"
+          className="shrink-0 rounded-full bg-brand px-4 py-1.5 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-200 max-sm:min-h-[44px]"
         >
-          Evaluate
+          {t("quick.evaluate")}
         </button>
       </div>
       <div className="mt-2 flex items-center gap-2">
         <CostBadge kind="spend" size="xs" />
-        <span className="text-xs text-faint">Evaluation runs on your own AI — your key, your machine.</span>
+        <span className="text-xs text-faint">
+          {t("quick.hint")}{" "}
+          <Link href="/evaluate" className="text-brand hover:underline">
+            {t("nav.evaluate")}
+          </Link>
+          .
+        </span>
       </div>
       {hint && <p className="mt-1 text-xs text-faint">{hint}</p>}
     </div>

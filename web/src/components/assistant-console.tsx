@@ -17,6 +17,7 @@ import { dispatch, type ActionCtx, type DoneInfo } from "@/app/actions/registry"
 import { scoreNum } from "@/lib/format";
 import { pendingActOpenerStart } from "@/lib/act-envelope.mjs";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/i18n/language-provider";
 
 // ── message model: messages are PART arrays so a live worker card can render
 // inline next to text, both fed by the single JobsProvider store ──────────────
@@ -133,6 +134,8 @@ function msgText(m: Msg): string {
 }
 
 export function AssistantConsole() {
+  const { t } = useT();
+  const greeting = t("assist.greeting");
   const [open, setOpen] = useState(false);
   const [cliId, setCliId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -197,8 +200,8 @@ export function AssistantConsole() {
   }, [messages]);
 
   useEffect(() => {
-    if (open && messages.length === 0) setMessages([{ role: "assistant", parts: [{ type: "text", text: GREETING }] }]);
-  }, [open, messages.length]);
+    if (open && messages.length === 0) setMessages([{ role: "assistant", parts: [{ type: "text", text: greeting }] }]);
+  }, [open, messages.length, greeting]);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
@@ -343,7 +346,7 @@ export function AssistantConsole() {
     const text = (forced ?? input).trim();
     if (!text || busy || !cliId) return;
     if (forced === undefined) setInput("");
-    const history = messages.filter((m) => msgText(m) && msgText(m) !== GREETING).map((m) => ({ role: m.role, content: msgText(m) }));
+    const history = messages.filter((m) => msgText(m) && msgText(m) !== GREETING && msgText(m) !== greeting).map((m) => ({ role: m.role, content: msgText(m) }));
     setMessages((m) => [...m, { role: "user", parts: [{ type: "text", text }] }, { role: "assistant", parts: [{ type: "text", text: "" }] }]);
     setBusy(true);
     handledRef.current = new Set();
@@ -423,7 +426,7 @@ export function AssistantConsole() {
   }
 
   function resetChat() {
-    setMessages([{ role: "assistant", parts: [{ type: "text", text: GREETING }] }]);
+    setMessages([{ role: "assistant", parts: [{ type: "text", text: greeting }] }]);
     confirmRuns.current.clear();
     try {
       localStorage.removeItem(CHAT_KEY);
@@ -571,7 +574,7 @@ export function AssistantConsole() {
                     send();
                   }
                 }}
-                placeholder={cliId ? "Ask anything…" : "Configure a CLI first"}
+                placeholder={cliId ? t("assist.placeholder") : t("assist.placeholderNoCli")}
                 rows={1}
                 disabled={!cliId}
                 className="max-h-32 flex-1 resize-none rounded-xl border border-border bg-surface/60 px-3 py-2 text-sm outline-none transition-colors placeholder:text-faint focus:border-brand/50 disabled:opacity-50"

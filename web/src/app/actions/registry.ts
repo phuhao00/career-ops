@@ -95,7 +95,7 @@ function isAllowedPath(p: string): boolean {
   if (/^(https?:)?\/\//i.test(p)) return false;
   const path = p.split(/[?#]/)[0];
   if (path === "/") return true;
-  return /^\/(explore|pipeline|portals|analytics|cv|config|apply|jobs)(\/[^/]+)?$/.test(path);
+  return /^\/(explore|evaluate|pipeline|portals|analytics|cv|config|apply|jobs|followups)(\/[^/]+)?$/.test(path);
 }
 
 function genBatchId(): string {
@@ -151,8 +151,9 @@ const ACTIONS: Record<string, ActionDef> = {
         subtitle: isStr(raw.subtitle) ? String(raw.subtitle) : undefined,
         kind: "evaluate",
         input: url,
-        page: "/pipeline",
+        page: "/evaluate",
       });
+      ctx.push("/evaluate");
       return { status: "done", jobIds: id ? [id] : [] };
     },
   },

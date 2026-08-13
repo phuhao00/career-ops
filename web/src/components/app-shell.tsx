@@ -17,14 +17,31 @@ import { WorkerPills } from "@/components/jobs/worker-pills";
 import { UsageMeter } from "@/components/usage-meter";
 import { instrumentSerif } from "@/lib/fonts";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
+import { LanguageProvider, useT } from "@/components/i18n/language-provider";
+import { LanguageToggle } from "@/components/i18n/language-toggle";
+import type { MsgKey } from "@/lib/i18n/messages";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   return (
-    <JobsProvider>
-      <PipelineProvider>
-      <ApplyProvider>
-      <ExploreProvider>
+    <LanguageProvider>
+      <JobsProvider>
+        <PipelineProvider>
+          <ApplyProvider>
+            <ExploreProvider>
+              <AppChrome>{children}</AppChrome>
+            </ExploreProvider>
+          </ApplyProvider>
+        </PipelineProvider>
+      </JobsProvider>
+    </LanguageProvider>
+  );
+}
+
+function AppChrome({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { t } = useT();
+  return (
+    <>
       <MobileNav />
       <div className="flex min-h-screen">
         <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface/30 p-4 md:flex">
@@ -35,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map(({ href, label, icon: Icon, chip }) => {
+            {NAV_ITEMS.map(({ href, id, label, icon: Icon, chip }) => {
               const active = isActivePath(href, pathname);
               return (
                 <Link
@@ -49,10 +66,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   )}
                 >
                   <Icon className="size-4" />
-                  {label}
+                  {t(`nav.${id}` as MsgKey, label)}
                   {chip && (
                     <span className="ml-auto rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand-text">
-                      {chip}
+                      {t("nav.new")}
                     </span>
                   )}
                 </Link>
@@ -64,8 +81,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="mt-auto space-y-3 pt-4">
             <UsageMeter />
+            <LanguageToggle />
             <div className="flex items-center justify-between px-1">
-              <span className={`${instrumentSerif.className} text-sm text-faint`}>local-first · v0</span>
+              <span className={`${instrumentSerif.className} text-sm text-faint`}>{t("shell.localFirst")}</span>
               <ThemeToggle />
             </div>
           </div>
@@ -75,9 +93,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <FirstScoreView />
         <BetaBanner />
       </div>
-      </ExploreProvider>
-      </ApplyProvider>
-      </PipelineProvider>
-    </JobsProvider>
+    </>
   );
 }

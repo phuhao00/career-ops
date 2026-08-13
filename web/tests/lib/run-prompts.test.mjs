@@ -83,6 +83,15 @@ test("buildPrompt: every kind ends with exactly one VERDICT instruction", () => 
   }
 });
 
+test("buildPrompt: injects language.output so reports follow the UI locale", () => {
+  const zh = buildPrompt({ kind: "evaluate", ...ARGS, outputLanguage: "zh" });
+  assert.match(zh, /Simplified Chinese/);
+  const en = buildPrompt({ kind: "evaluate", ...ARGS });
+  assert.match(en, /Write all human-facing output in English/);
+  const pdf = buildPrompt({ kind: "pdf", ...ARGS, outputLanguage: "ja" });
+  assert.match(pdf, /Japanese/);
+});
+
 test("buildPrompt: an unknown kind falls through to the evaluate prompt", () => {
   // Given a kind nobody has taught this map about
   // When building its prompt

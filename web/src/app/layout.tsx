@@ -25,6 +25,8 @@ export const viewport: Viewport = {
 // jarring light seam. Matches --bg (light #f7f6f3 / dark #0a0a0a).
 const THEME_SCRIPT = `(function(){try{var t=localStorage.getItem('career-ops:theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}m.setAttribute('content',d?'#0a0a0a':'#f7f6f3');}catch(e){document.documentElement.classList.add('dark');}})();`;
 
+const LANG_SCRIPT = `(function(){try{var id=localStorage.getItem('career-ops:lang')||'en';document.documentElement.lang=id==='zh'?'zh-CN':id;document.documentElement.dir=id==='ar'?'rtl':'ltr';}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -34,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="font-sans antialiased">
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: LANG_SCRIPT }} />
         <AppShell>{children}</AppShell>
       </body>
     </html>

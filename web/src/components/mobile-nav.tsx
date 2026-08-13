@@ -12,6 +12,9 @@ import { UsageMeter } from "@/components/usage-meter";
 import { instrumentSerif } from "@/lib/fonts";
 import { NAV_ITEMS, isActivePath } from "@/lib/nav-items";
 import { useJobs } from "@/components/jobs/job-store";
+import { LanguageToggle } from "@/components/i18n/language-toggle";
+import { useT } from "@/components/i18n/language-provider";
+import type { MsgKey } from "@/lib/i18n/messages";
 
 // Mobile navigation (< md): a glass top bar + a right-side slide-over drawer that
 // mirrors the desktop sidebar (nav + workers + usage + theme). Premium details:
@@ -39,6 +42,7 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
   const { jobs } = useJobs();
+  const { t } = useT();
   const running = jobs.filter((j) => j.status === "running").length;
 
   // Close on route change.
@@ -150,7 +154,7 @@ export function MobileNav() {
         </div>
 
         <nav className="flex flex-col gap-1 px-3">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, chip }) => {
+          {NAV_ITEMS.map(({ href, id, label, icon: Icon, chip }) => {
             const active = isActivePath(href, pathname);
             return (
               <Link
@@ -164,10 +168,10 @@ export function MobileNav() {
                 )}
               >
                 <Icon className="size-5" />
-                {label}
+                {t(`nav.${id}` as MsgKey, label)}
                 {chip && (
                   <span className="ml-auto rounded-full border border-brand/30 bg-brand-soft px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand-text">
-                    {chip}
+                    {t("nav.new")}
                   </span>
                 )}
               </Link>
@@ -181,8 +185,9 @@ export function MobileNav() {
 
         <div className="co-msafe mt-auto space-y-3 border-t border-border px-4 pt-4">
           <UsageMeter />
+          <LanguageToggle />
           <div className="flex items-center justify-between">
-            <span className={`${instrumentSerif.className} text-sm text-faint`}>local-first · v0</span>
+            <span className={`${instrumentSerif.className} text-sm text-faint`}>{t("shell.localFirst")}</span>
             <ThemeToggle />
           </div>
         </div>

@@ -5,23 +5,28 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowLeft, Loader2, Wrench, CircleDot, Check, X } from "lucide-react";
-import { useJobs } from "@/components/jobs/job-store";
+import { useJobs, type Job } from "@/components/jobs/job-store";
 import { HeroGlow } from "@/components/hero-glow";
 import { Badge } from "@/components/ui/badge";
+import { derivePipeline } from "@/lib/eval-pipeline.mjs";
+import { cn } from "@/lib/cn";
+import { useT } from "@/components/i18n/language-provider";
+import type { MsgKey } from "@/lib/i18n/messages";
 
 export default function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { jobs } = useJobs();
+  const { t } = useT();
   const job = jobs.find((j) => j.id === id);
 
   if (!job) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-10">
         <Link href="/pipeline" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
-          <ArrowLeft className="size-4" /> Pipeline
+          <ArrowLeft className="size-4" /> {t("nav.pipeline")}
         </Link>
         <p className="mt-8 text-sm text-muted">
-          This worker is no longer in memory (it finished earlier or the page was reloaded).
+          {t("job.gone")}
         </p>
       </div>
     );
@@ -29,8 +34,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
-      <Link href="/pipeline" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
-        <ArrowLeft className="size-4" /> Pipeline
+      <Link href={job.kind === "evaluate" ? "/evaluate" : "/pipeline"} className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-brand">
+        <ArrowLeft className="size-4" /> {job.kind === "evaluate" ? t("nav.evaluate") : t("nav.pipeline")}
       </Link>
 
       <section className="dot-bg relative mt-5 overflow-hidden rounded-2xl border border-border bg-surface/40 px-6 py-7">
@@ -38,11 +43,11 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <div className="relative z-10">
           <p className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-faint">
             {job.status === "running" ? (
-              <><Loader2 className="size-3 animate-spin text-brand" /> working</>
+              <><Loader2 className="size-3 animate-spin text-brand" /> {t("job.working")}</>
             ) : job.status === "done" ? (
-              <><Check className="size-3 text-emerald-500" /> done</>
+              <><Check className="size-3 text-emerald-500" /> {t("job.done")}</>
             ) : (
-              <><X className="size-3 text-red-400" /> error</>
+              <><X className="size-3 text-red-400" /> {t("job.error")}</>
             )}
           </p>
           <h1 className="mt-2 font-display text-2xl tracking-tight text-landing">{job.title}</h1>
@@ -56,6 +61,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         </div>
       </section>
 
+      {job.kind === "evaluate" && <JobPipelineStrip job={job} />}
+
       <ol className="mt-6 space-y-2">
         {job.steps.map((s, i) => (
           <li key={i} className="flex items-start gap-2.5 text-sm">
@@ -65,25 +72,50 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
               <CircleDot className="mt-0.5 size-3.5 shrink-0 text-faint" />
             )}
             <span className={s.kind === "tool" ? "font-medium" : "text-muted"}>
-              {s.kind === "tool" ? `Using ${s.label}` : s.label}
+              {s.kind === "tool" ? `${t("job.using")} ${s.label}` : s.label}
             </span>
           </li>
         ))}
         {job.status === "running" && (
           <li className="flex items-center gap-2.5 text-sm text-muted">
-            <Loader2 className="size-3.5 animate-spin text-brand" /> thinking…
+            <Loader2 className="size-3.5 animate-spin text-brand" /> {t("job.thinking")}
           </li>
         )}
       </ol>
 
       {job.text && (
         <div className="mt-8">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Output</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{t("job.output")}</h2>
           <div className="report-prose mt-3 rounded-2xl border border-border bg-surface/40 p-5">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{job.text}</ReactMarkdown>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function JobPipelineStrip({ job }: { job: Job }) {
+  const { t } = useT();
+  const { stages } = derivePipeline(job, null);
+  return (
+    <ol className="mt-5 flex flex-wrap gap-2">
+      {stages.map((s) => (
+        <li
+          key={s.id}
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+            s.status === "done" && "border-brand/40 bg-brand-soft text-brand-text",
+            s.status === "active" && "border-brand text-brand",
+            s.status === "error" && "border-red-400/40 text-red-400",
+            s.status === "ready" && "border-brand/30 text-brand",
+            s.status === "pending" && "border-border text-faint",
+          )}
+        >
+          {s.status === "active" && <Loader2 className="mr-1 inline size-3 animate-spin" />}
+          {t(`stage.${s.id}.title` as MsgKey, s.title)}
+        </li>
+      ))}
+    </ol>
   );
 }

@@ -24,6 +24,7 @@ Open http://localhost:3000. The app reads the career-ops checkout it lives in
 
 ## What works today
 
+- **Evaluate** — paste a job URL or JD; watch the six-step auto-pipeline (read posting → CV → score → report → tracker → PDF) run live.
 - **Pipeline** — your tracker as a sortable, filterable table; status changes
   write back through the core's own scripts.
 - **Explore** — the free reverse-ATS scan with an honest partial-dataset

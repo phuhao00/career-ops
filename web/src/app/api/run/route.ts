@@ -7,6 +7,8 @@ import { resolvePdfPaths, type PdfPaths } from "@/lib/pdf-paths.mjs";
 import { renderAndMarkPdf, writeCvHtml, pdfRunOutcome } from "@/lib/pdf-render.mjs";
 import { createCvEnvelopeFilter, type CvEnvelope } from "@/lib/cv-envelope.mjs";
 import { buildPrompt, isShellSafeCompanyName } from "@/lib/run-prompts.mjs";
+import { readOutputLanguage } from "@/lib/i18n/profile-locale";
+import { DEFAULT_LOCALE, normalizeLocale } from "@/lib/i18n/locale.mjs";
 import { claudeCliArgs } from "@/lib/claude-invocation.mjs";
 import { acquireTrackerWrite, releaseTrackerWrite } from "@/lib/core/run-registry";
 
@@ -15,7 +17,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 800; // a real oferta evaluation / pdf-mode CV tailoring + render is heavy and multi-step
 
 export async function POST(req: Request) {
-  let body: { kind?: string; input?: string; cliId?: string };
+  let body: { kind?: string; input?: string; cliId?: string; outputLanguage?: string };
   try {
     body = await req.json();
   } catch {
@@ -86,7 +88,11 @@ export async function POST(req: Request) {
     pdfPaths = pathsResult.paths;
   }
 
-  const prompt = buildPrompt({ kind, input, memory: readMemory(), today });
+  const outputLanguage =
+    typeof body.outputLanguage === "string" && body.outputLanguage.trim()
+      ? normalizeLocale(body.outputLanguage)
+      : readOutputLanguage() ?? DEFAULT_LOCALE;
+  const prompt = buildPrompt({ kind, input, memory: readMemory(), today, outputLanguage });
 
   const isClaude = cliId === "claude";
   // Which tools each kind gets, and the whole claude argv, live in

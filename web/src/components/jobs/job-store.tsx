@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { scoreTone } from "@/lib/format";
+import { STORAGE_KEY as LANG_KEY, DEFAULT_LOCALE } from "@/lib/i18n/locale.mjs";
 
 export type JobStep = { kind: "tool" | "status"; label: string; ts: number };
 export type JobResult = { score: number | null; summary: string; tone: "good" | "warn" | "bad" | "muted" };
@@ -153,10 +154,16 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
         };
 
         try {
+          let outputLanguage = DEFAULT_LOCALE;
+          try {
+            outputLanguage = localStorage.getItem(LANG_KEY) || DEFAULT_LOCALE;
+          } catch {
+            /* ignore */
+          }
           const res = await fetch("/api/run", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ kind: opts.kind, input: opts.input, cliId }),
+            body: JSON.stringify({ kind: opts.kind, input: opts.input, cliId, outputLanguage }),
           });
           if (!res.ok || !res.body) {
             const e = await res.json().catch(() => ({}));

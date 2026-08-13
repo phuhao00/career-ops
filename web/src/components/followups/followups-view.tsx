@@ -21,6 +21,8 @@ import {
   urgencyTone,
 } from "@/lib/followups";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/i18n/language-provider";
+import type { MsgKey } from "@/lib/i18n/messages";
 
 // The /followups tracker: WHO needs a nudge today, HOW urgent, WHEN the next
 // touch is due, and the permanent history of every follow-up sent. The verdict
@@ -79,6 +81,7 @@ type CadenceResponse = {
 };
 
 export function FollowupsView() {
+  const { t } = useT();
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -180,15 +183,13 @@ export function FollowupsView() {
 
   const subtitle = !data ? (
     <span className="inline-flex items-center gap-1.5">
-      <Loader2 className="size-3.5 animate-spin" /> Computing cadence…
+      <Loader2 className="size-3.5 animate-spin" /> {t("followups.computing")}
     </span>
   ) : !data.available || !meta ? (
-    "Cadence unavailable"
+    t("followups.unavailable")
   ) : (
     <>
-      <span className="tabular-nums">{meta.actionable}</span> active ·{" "}
-      <span className="tabular-nums">{meta.urgent}</span> urgent ·{" "}
-      <span className="tabular-nums">{meta.overdue}</span> overdue
+      {t("followups.meta", { actionable: meta.actionable, urgent: meta.urgent, overdue: meta.overdue })}
     </>
   );
 
@@ -196,7 +197,7 @@ export function FollowupsView() {
     <div className="mx-auto max-w-none px-6 py-8">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl tracking-tight text-landing">Follow-up Tracker</h1>
+          <h1 className="font-display text-2xl tracking-tight text-landing">{t("followups.title")}</h1>
           <p className="mt-1 text-sm text-muted">{subtitle}</p>
         </div>
         <div className="relative w-56 max-w-[35vw]">
@@ -204,7 +205,7 @@ export function FollowupsView() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search company or role…"
+            placeholder={t("pipeline.search")}
             className="w-full rounded-md border border-border bg-surface/60 py-2 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-faint focus:border-brand/50 focus-visible:ring-2 focus-visible:ring-brand/40"
           />
         </div>
@@ -214,18 +215,18 @@ export function FollowupsView() {
 
       {/* urgency filter */}
       <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
-        {URGENCY_TABS.map((t) => {
-          const count = t === "ALL" ? entries.length : entries.filter((e) => e.urgency.toUpperCase() === t).length;
+        {URGENCY_TABS.map((tabId) => {
+          const count = tabId === "ALL" ? entries.length : entries.filter((e) => e.urgency.toUpperCase() === tabId).length;
           return (
             <button
-              key={t}
-              onClick={() => setParams({ urgency: t === "ALL" ? null : t })}
+              key={tabId}
+              onClick={() => setParams({ urgency: tabId === "ALL" ? null : tabId })}
               className={cn(
                 "-mb-px border-b-2 px-3 py-2 text-xs font-medium transition-colors",
-                tab === t ? "border-brand text-foreground" : "border-transparent text-muted hover:text-foreground",
+                tab === tabId ? "border-brand text-foreground" : "border-transparent text-muted hover:text-foreground",
               )}
             >
-              {t} <span className="text-faint tabular-nums">{count}</span>
+              {t(`urgency.${tabId}` as MsgKey, tabId)} <span className="text-faint tabular-nums">{count}</span>
             </button>
           );
         })}
@@ -260,7 +261,7 @@ export function FollowupsView() {
                           setParams({ sort: c.key, dir: active ? dir * -1 : c.key === "urgency" ? -1 : 1 })
                         }
                       >
-                        {c.label}
+                        {t(`followups.col.${c.key}` as MsgKey, c.label)}
                         <span aria-hidden="true" className={cn(!active && "text-faint")}>
                           {active ? (dir === 1 ? "▲" : "▼") : "⇅"}
                         </span>
@@ -268,7 +269,7 @@ export function FollowupsView() {
                     </th>
                   );
                 })}
-                <th className="px-2.5 py-2.5 font-medium">Action</th>
+                <th className="px-2.5 py-2.5 font-medium">{t("followups.action")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -440,13 +441,14 @@ function FollowupRow({
 }
 
 function HistoryPanel({ entry: e, onRemove }: { entry: CadenceEntry; onRemove: (num: number) => void }) {
+  const { t } = useT();
   // Tolerate an older core engine (CAREER_OPS_ROOT can point at a separate
   // checkout whose followup-cadence.mjs predates the per-entry followups[]).
   const history = e.followups ?? [];
   return (
     <div className="space-y-2 pl-7 text-sm">
       {history.length === 0 ? (
-        <p className="text-faint">No follow-ups logged yet.</p>
+        <p className="text-faint">{t("followups.none")}</p>
       ) : (
         <ul className="space-y-1.5">
           {history.map((f, i) => (

@@ -15,6 +15,7 @@ import { ExploreModeToggle } from "./explore-mode-toggle";
 import { AiSearchBox } from "./ai-search-box";
 import { ResultsList, type EnrichedOffer } from "./results-list";
 import { useExplore } from "./explore-provider";
+import { useT } from "@/components/i18n/language-provider";
 
 // Same shape as core normalizeTextKey(s, " ") — never [^a-z0-9] (#2666).
 const norm = (s: string) => normalizeTextKey(s, " ");
@@ -39,10 +40,15 @@ export function ExplorerView({
   appsSnapshot: Application[];
   rootExists: boolean;
 }) {
+  const { t } = useT();
   const { filters, setFilters, initFilters, phase, running, offers, discover, loadFresh, status, error, mode, setMode, aiIntent, setAiIntent, discoverAI, companiesScanned, companiesAvailable, capHit, droppedNoDate, partial } = useExplore();
   const scanNote =
     companiesScanned > 0
-      ? `Scanned ${companiesScanned.toLocaleString()}${companiesAvailable > companiesScanned ? ` of ${companiesAvailable.toLocaleString()}` : ""} compan${companiesScanned === 1 ? "y" : "ies"}${partial ? " · some sources were unreachable" : ""}.`
+      ? t(companiesAvailable > companiesScanned ? "explore.scanNoteOf" : "explore.scanNote", {
+          n: companiesScanned.toLocaleString(),
+          total: companiesAvailable.toLocaleString(),
+          partial: partial ? t("explore.scanPartial") : "",
+        })
       : undefined;
   const inited = useRef(false);
   const [refineOpen, setRefineOpen] = useState(false);
@@ -117,8 +123,8 @@ export function ExplorerView({
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5">
             <Compass className="size-6 text-brand" />
-            <h1 className={`${instrumentSerif.className} text-3xl text-foreground`}>Explore</h1>
-            <span className="rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-text">New</span>
+            <h1 className={`${instrumentSerif.className} text-3xl text-foreground`}>{t("explore.title")}</h1>
+            <span className="rounded-full border border-brand/30 bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-text">{t("nav.new")}</span>
           </div>
           <div className="w-full sm:ml-auto sm:w-auto">
             <ExploreModeToggle mode={mode} onChange={setMode} cliConfigured={!!cli.id} />
@@ -126,16 +132,14 @@ export function ExplorerView({
         </div>
         {!isResults && (
           <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-muted">
-            {isAi
-              ? "Describe the role in plain language — an AI hunts the open web for it, on your own AI. Candidates are unverified until you evaluate."
-              : "Scan the public ATS network — Greenhouse, Lever, Ashby, Workday. Fresh postings matched to you, zero tokens. You only spend when you choose to evaluate one."}
+            {isAi ? t("explore.leadAi") : t("explore.leadScan")}
           </p>
         )}
       </header>
 
       {!rootExists && (
         <div className="mb-5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
-          Your career-ops home isn’t set up yet — discovery needs a checkout with a profile to seed from.
+          {t("explore.noRoot")}
         </div>
       )}
 
@@ -156,10 +160,10 @@ export function ExplorerView({
             {phase === "empty-loose" && (
               <EmptyState
                 tone="loose"
-                title="No public matches — yet."
-                body="AI search reads what's public. Try broader intent, or run the free Scan over the ATS network."
+                title={t("explore.aiEmpty")}
+                body={t("explore.aiEmptyBody")}
                 onRerun={() => setMode("scan")}
-                rerunLabel="Run the free Scan"
+                rerunLabel={t("explore.runScan")}
               />
             )}
             {phase === "failed" && <FailedCard msg={error || status} onRetry={() => void discoverAI()} />}
@@ -170,13 +174,13 @@ export function ExplorerView({
           {isResults ? (
             <div className="mb-6 rounded-xl border border-border bg-surface/30">
               <button type="button" onClick={() => setRefineOpen((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-foreground">
-                <Compass className="size-4 text-brand" /> Refine search
+                <Compass className="size-4 text-brand" /> {t("explore.refine")}
                 <ChevronDown className={cn("ml-auto size-4 text-muted transition-transform", refineOpen && "rotate-180")} />
               </button>
               {refineOpen && (
                 <div className="space-y-4 border-t border-border p-4">
                   <FilterBuilder filters={filters} onChange={setFilters} seededFrom={seed.seededFrom} />
-                  <DiscoverBar canDiscover={canDiscover} onDiscover={discover} label="Re-cast (free)" />
+                  <DiscoverBar canDiscover={canDiscover} onDiscover={discover} label={t("explore.recast")} />
                 </div>
               )}
             </div>
@@ -184,7 +188,7 @@ export function ExplorerView({
             <div className="mb-6 rounded-2xl border border-border bg-surface/30 p-5">
               <FilterBuilder filters={filters} onChange={setFilters} seededFrom={seed.seededFrom} />
               <div className="mt-5">
-                <DiscoverBar canDiscover={canDiscover} onDiscover={discover} label="Discover (free)" />
+                  <DiscoverBar canDiscover={canDiscover} onDiscover={discover} label={t("explore.discover")} />
               </div>
             </div>
           )}
@@ -193,7 +197,7 @@ export function ExplorerView({
             <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
               <Sparkles className="mt-0.5 size-4 shrink-0 text-emerald-500" />
               <p className="text-[13px] leading-relaxed text-foreground">
-                These are live roles that match your CV. <span className="text-emerald-600 dark:text-emerald-400">Nothing here cost you a token.</span> Pick the one you&apos;re most curious about — Evaluate it and I&apos;ll tell you exactly how you score, and why.
+                {t("explore.firstRun")}
               </p>
             </div>
           )}
@@ -206,27 +210,27 @@ export function ExplorerView({
           {phase === "empty-current" && (
             <EmptyState
               tone="good"
-              title="You're all caught up."
-              body="Nothing new since your last scan. Your pipeline is current — that's the goal."
+              title={t("explore.emptyCaught")}
+              body={t("explore.emptyCaughtBody")}
               note={scanNote}
               onRerun={() => {
                 setFilters({ ...filters, sinceDays: Math.max(filters.sinceDays, 30) });
                 void discover();
               }}
-              rerunLabel="Look back 30 days"
+              rerunLabel={t("explore.look30")}
             />
           )}
           {phase === "empty-loose" && (
             <EmptyState
               tone="loose"
-              title="No fresh matches — yet."
-              body="Discovery is free — loosen and re-cast as often as you want."
+              title={t("explore.emptyFresh")}
+              body={t("explore.emptyFreshBody")}
               note={scanNote}
               onRerun={() => {
                 setFilters({ ...filters, sinceDays: 30, block: [], allow: [] });
                 void discover();
               }}
-              rerunLabel="Widen to 30 days · clear location"
+              rerunLabel={t("explore.widen")}
             />
           )}
           {phase === "degraded" && (
@@ -247,6 +251,7 @@ export function ExplorerView({
 }
 
 function DiscoverBar({ canDiscover, onDiscover, label }: { canDiscover: boolean; onDiscover: () => void; label: string }) {
+  const { t } = useT();
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
@@ -259,7 +264,7 @@ function DiscoverBar({ canDiscover, onDiscover, label }: { canDiscover: boolean;
       </button>
       <span className="inline-flex items-center gap-1.5 text-[12px] text-muted">
         <span className="size-1.5 rounded-full bg-emerald-500" />
-        Evaluating a role later costs tokens. Discovering never does.
+        {t("explore.discoverHint")}
       </span>
     </div>
   );
@@ -296,6 +301,7 @@ function DegradedCard({
   droppedNoDate: number;
   partial: boolean;
 }) {
+  const { t } = useT();
   // 0 results, but the scan was NOT a clean full search → never "all caught up".
   // Pick the most informative reason (authoritative when the scanner's --json mode
   // is available; otherwise the 0-companies fallback).
@@ -318,23 +324,24 @@ function DegradedCard({
       <p className="mt-2 text-sm font-medium text-foreground">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-[13px] text-muted">{body}</p>
       <button onClick={onRetry} className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-brand-soft px-3 py-1.5 text-sm font-medium text-brand">
-        <RotateCcw className="size-4" /> Retry the scan
+        <RotateCcw className="size-4" /> {t("explore.retry")}
       </button>
     </div>
   );
 }
 
 function CappedBanner({ companiesScanned, companiesAvailable, onRefine }: { companiesScanned: number; companiesAvailable: number; onRefine: () => void }) {
-  // Results ARE present, but the scan was capped — tell the user there's more, so a
-  // partial list never reads as "everything there is".
+  const { t } = useT();
   return (
     <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-4 py-2.5 text-[13px]">
       <span className="text-foreground">
-        Showing a capped slice — searched {companiesScanned.toLocaleString()}
-        {companiesAvailable > companiesScanned ? ` of ${companiesAvailable.toLocaleString()}` : ""} companies.
+        {t(companiesAvailable > companiesScanned ? "explore.cappedOf" : "explore.capped", {
+          n: companiesScanned.toLocaleString(),
+          total: companiesAvailable.toLocaleString(),
+        })}
       </span>
       <button onClick={onRefine} className="font-medium text-brand hover:underline">
-        Raise scan depth to search deeper
+        {t("explore.raiseDepth")}
       </button>
     </div>
   );

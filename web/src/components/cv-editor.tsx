@@ -5,8 +5,10 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/i18n/language-provider";
 
 export function CvEditor() {
+  const { t } = useT();
   const [content, setContent] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [exists, setExists] = useState(true);
@@ -47,10 +49,10 @@ export function CvEditor() {
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl tracking-tight text-landing">CV editor</h1>
+          <h1 className="font-display text-2xl tracking-tight text-landing">{t("cv.title")}</h1>
           <p className="mt-1 text-sm text-muted">
-            Edit <code className="text-foreground">cv.md</code> with live preview.
-            {!exists && loaded && <span className="ml-1 text-faint">No cv.md yet — start typing to create it.</span>}
+            {t("cv.lead")}
+            {!exists && loaded && <span className="ml-1 text-faint">{t("cv.missing")}</span>}
           </p>
         </div>
         <button
@@ -65,12 +67,12 @@ export function CvEditor() {
           )}
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : saved ? <Check className="size-4" /> : null}
-          {saved ? "Saved" : "Save"}
+          {saved ? t("cv.saved") : t("cv.save")}
         </button>
       </div>
 
       {!loaded ? (
-        <div className="mt-6 text-sm text-muted">Loading…</div>
+        <div className="mt-6 text-sm text-muted">{t("cv.loading")}</div>
       ) : (
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
           <textarea
