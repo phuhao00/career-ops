@@ -83,3 +83,15 @@ test('--company with no operand is rejected', () => {
   assert.match(r.all, /--company requires a value/);
   assert.notEqual(r.status, 0);
 });
+
+test('--location=深圳 reaches the filter (equals form)', () => {
+  const r = runScan('--location=深圳');
+  assert.doesNotMatch(r.all, /--location requires a value/);
+  assert.match(r.all, /portals\.yml not found|not found/i);
+});
+
+test('--location with no operand is rejected', () => {
+  const r = runScan('--location');
+  assert.match(r.all, /--location requires a value/);
+  assert.notEqual(r.status, 0);
+});

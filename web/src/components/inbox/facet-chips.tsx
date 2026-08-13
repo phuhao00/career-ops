@@ -1,11 +1,12 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Search, X, MapPin } from "lucide-react";
 import type { AtsSource } from "@/lib/explore";
 import { ATS_LABEL } from "@/lib/explore";
 import { FRESHNESS_WINDOWS, SENIORITY_LABEL, type Seniority } from "@/lib/inbox";
 import { CostBadge } from "@/components/cost/cost-badge";
 import { cn } from "@/lib/cn";
+import { useT } from "@/components/i18n/language-provider";
 
 // Free, client-side facets over the raw firehose — 0 tokens, instant. Mirrors the
 // Explore chip language so the two surfaces read as one system. On mobile the chip
@@ -19,6 +20,9 @@ export function FacetChips({
   toggleSeniority,
   locQ,
   setLocQ,
+  cities,
+  selectedCities,
+  toggleCity,
   kw,
   setKw,
   availSources,
@@ -36,6 +40,9 @@ export function FacetChips({
   toggleSeniority: (s: Seniority) => void;
   locQ: string;
   setLocQ: (v: string) => void;
+  cities: { label: string; count: number }[];
+  selectedCities: Set<string>;
+  toggleCity: (label: string) => void;
   kw: string;
   setKw: (v: string) => void;
   availSources: AtsSource[];
@@ -45,6 +52,7 @@ export function FacetChips({
   anyActive: boolean;
   onClear: () => void;
 }) {
+  const { t } = useT();
   return (
     <div className="space-y-2.5">
       {/* keyword search + live count */}
@@ -54,7 +62,7 @@ export function FacetChips({
           <input
             value={kw}
             onChange={(e) => setKw(e.target.value)}
-            placeholder="Filter by company or role…"
+            placeholder={t("pipeline.search")}
             className="w-full rounded-lg border border-border bg-surface/60 py-2 pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-faint focus:border-brand/50 focus-visible:ring-2 focus-visible:ring-brand/40 max-sm:min-h-[44px]"
           />
         </div>
@@ -94,31 +102,62 @@ export function FacetChips({
             {SENIORITY_LABEL[s]}
           </Pill>
         ))}
-
-        {/* location contains */}
-        <input
-          value={locQ}
-          onChange={(e) => setLocQ(e.target.value)}
-          placeholder="location…"
-          className="w-28 shrink-0 rounded-full border border-border bg-surface/40 px-3 text-xs outline-none transition-colors placeholder:text-faint focus:border-brand/40 max-sm:min-h-[44px] py-1"
-        />
-
-        {anyActive && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 text-xs text-faint transition-colors hover:text-foreground max-sm:min-h-[44px]"
-          >
-            <X className="size-3" /> Clear
-          </button>
-        )}
       </div>
+
+      {cities.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-faint">
+            <MapPin className="size-3" /> {t("inbox.cities")}
+          </span>
+          {cities.map((c) => (
+            <Pill key={c.label} on={selectedCities.has(c.label)} onClick={() => toggleCity(c.label)}>
+              {c.label}
+              <span className="ml-1 tabular-nums opacity-60">{c.count}</span>
+            </Pill>
+          ))}
+          <input
+            value={locQ}
+            onChange={(e) => setLocQ(e.target.value)}
+            placeholder={t("inbox.location")}
+            className="w-28 shrink-0 rounded-full border border-border bg-surface/40 px-3 text-xs outline-none transition-colors placeholder:text-faint focus:border-brand/40 max-sm:min-h-[44px] py-1"
+          />
+          {anyActive && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 text-xs text-faint transition-colors hover:text-foreground max-sm:min-h-[44px]"
+            >
+              <X className="size-3" /> {t("inbox.clearFacets")}
+            </button>
+          )}
+        </div>
+      )}
+
+      {cities.length === 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          <input
+            value={locQ}
+            onChange={(e) => setLocQ(e.target.value)}
+            placeholder={t("inbox.location")}
+            className="w-28 shrink-0 rounded-full border border-border bg-surface/40 px-3 text-xs outline-none transition-colors placeholder:text-faint focus:border-brand/40 max-sm:min-h-[44px] py-1"
+          />
+          {anyActive && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 text-xs text-faint transition-colors hover:text-foreground max-sm:min-h-[44px]"
+            >
+              <X className="size-3" /> {t("inbox.clearFacets")}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Token-honesty is bidirectional: the "free" reassurance is as always-visible
           as the tray's "spend" cue (mobile + desktop) — never desktop-only. */}
       <div className="flex items-center gap-1.5">
         <CostBadge kind="free" size="xs" />
-        <span className="text-[11px] text-faint">Filtering is free — only scoring uses tokens.</span>
+        <span className="text-[11px] text-faint">{t("inbox.filterFree")}</span>
       </div>
     </div>
   );

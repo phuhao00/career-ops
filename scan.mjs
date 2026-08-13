@@ -24,6 +24,7 @@
  *   node scan.mjs                  # scan all enabled companies
  *   node scan.mjs --dry-run        # preview without writing files
  *   node scan.mjs --company Cohere # scan a single company
+ *   node scan.mjs --location 深圳  # keep only this city (aliases expanded; comma-separated OK)
  *   node scan.mjs --verify         # Playwright-check each new URL; drop expired postings
  *   node scan.mjs --verify --headed-fallback  # retry anti-bot-blocked URLs in a headed browser (needs a display)
  *   node scan.mjs --verify --throttle          # jittered ~5-10s gap between checks (stay under rate limits)
@@ -47,6 +48,7 @@ import { normalizeCompany } from './tracker-utils.mjs';
 import { normalizeCompanyName } from './invite-match.mjs';
 import { withPipelineLock } from './pipeline-lock.mjs';
 import { flagValue, hasFlag } from './lib/cli-flags.mjs';
+import { expandLocationQuery } from './lib/cn-cities.mjs';
 import { withPortalHealthLock } from './portal-health-lock.mjs';
 
 try {
@@ -2168,6 +2170,14 @@ async function main() {
     return value;
   };
   const filterCompany = requireValue('--company')?.toLowerCase() ?? null;
+  // --location 深圳 (or --location=深圳,上海): override portals.yml allow/always_allow
+  // for this run. Aliases expand (深圳 → 深圳 + Shenzhen) so CN/EN boards both hit.
+  const locationOverrideRaw = requireValue('--location');
+  const locationOverride = locationOverrideRaw ? expandLocationQuery(locationOverrideRaw) : null;
+  if (locationOverrideRaw && (!locationOverride || locationOverride.length === 0)) {
+    console.error('Error: --location requires a city name (e.g. 深圳 or Shenzhen)');
+    process.exit(1);
+  }
   // --posted-after / --posted-before <YYYY-MM-DD>: absolute-date bounds on the
   // employer's real posting date (job.postedAt), gated against a typo since a
   // silently-ignored bound would look like "no jobs matched" instead of an error.
@@ -2249,7 +2259,20 @@ async function main() {
     classifyTier = mod.classifyTier || mod.default;
   }
 
-  const locationFilter = buildLocationFilter(config.location_filter);
+  const locationFilter = buildLocationFilter(
+    locationOverride
+      ? {
+          always_allow: locationOverride,
+          allow: locationOverride,
+          block: config.location_filter && typeof config.location_filter === 'object'
+            ? config.location_filter.block
+            : undefined,
+        }
+      : config.location_filter,
+  );
+  if (locationOverride) {
+    console.error(`Location override: ${locationOverride.join(', ')}`);
+  }
   const postingAgeFilter = buildPostingAgeFilter(config.max_posting_age_days);
   const postedDateFilter = buildPostedDateFilter(effectiveAfter, postedBefore);
 

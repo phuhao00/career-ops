@@ -7,6 +7,7 @@ import type { InboxJob } from "@/lib/career-ops";
 import type { AtsSource } from "@/lib/explore";
 import { ATS_SOURCES } from "@/lib/explore";
 import { daysSince, seniorityFromTitle, sourceFromUrl, SENIORITY_ORDER, type Seniority } from "@/lib/inbox";
+import { citiesPresent, locationMatchesCity } from "@/lib/cn-cities";
 import { FacetChips } from "./facet-chips";
 import { TriageRow, type RowScore } from "./triage-row";
 import { ShortlistTray, type ShortItem } from "./shortlist-tray";
@@ -29,6 +30,7 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
   const [sources, setSources] = useState<Set<AtsSource>>(() => new Set());
   const [seniorities, setSeniorities] = useState<Set<Seniority>>(() => new Set());
   const [locQ, setLocQ] = useState("");
+  const [locCities, setLocCities] = useState<Set<string>>(() => new Set());
   const [kw, setKw] = useState("");
   const [showAll, setShowAll] = useState(false);
 
@@ -39,6 +41,11 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
   const [undo, setUndo] = useState<{ label: string; fn: () => void } | null>(null);
   const [hasCli, setHasCli] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const loc = new URLSearchParams(window.location.search).get("loc");
+    if (loc) setLocCities(new Set(loc.split(/[,，]/).map((s) => s.trim()).filter(Boolean)));
+  }, []);
 
   useEffect(() => {
     try {
@@ -116,11 +123,16 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
         if (within != null && (e.age == null || e.age > within)) return false;
         if (sources.size && (!e.source || !sources.has(e.source))) return false;
         if (seniorities.size && (!e.seniority || !seniorities.has(e.seniority))) return false;
+        if (locCities.size) {
+          const loc = e.job.location || "";
+          const hit = [...locCities].some((label) => locationMatchesCity(loc, label));
+          if (!hit) return false;
+        }
         if (locQ.trim() && !(e.job.location || "").toLowerCase().includes(locQ.trim().toLowerCase())) return false;
         if (kw.trim() && !`${e.job.company} ${e.job.role}`.toLowerCase().includes(kw.trim().toLowerCase())) return false;
         return true;
       }),
-    [enriched, hidden, within, sources, seniorities, locQ, kw],
+    [enriched, hidden, within, sources, seniorities, locCities, locQ, kw],
   );
 
   // 🔴 SINGLE ORDER PLUG POINT — freshness only (newest first_seen first; unknown last).
@@ -128,7 +140,12 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
   // touch relevance. This is the whole firewall in one line.
   const ordered = useMemo(() => [...filtered].sort((a, b) => (a.age ?? Infinity) - (b.age ?? Infinity)), [filtered]);
 
-  const anyFacet = within != null || sources.size > 0 || seniorities.size > 0 || locQ.trim() !== "" || kw.trim() !== "";
+  const availCities = useMemo(
+    () => citiesPresent(enriched.filter((e) => !hidden.includes(e.job.url)).map((e) => e.job.location || "")),
+    [enriched, hidden],
+  );
+
+  const anyFacet = within != null || sources.size > 0 || seniorities.size > 0 || locCities.size > 0 || locQ.trim() !== "" || kw.trim() !== "";
   const capped = !showAll && !anyFacet;
   const visible = capped ? ordered.slice(0, BATCH) : ordered;
   const hiddenCount = hidden.length;
@@ -190,6 +207,15 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
         toggleSeniority={(s) => setSeniorities((set) => { const n = new Set(set); n.has(s) ? n.delete(s) : n.add(s); return n; })}
         locQ={locQ}
         setLocQ={setLocQ}
+        cities={availCities}
+        selectedCities={locCities}
+        toggleCity={(label) =>
+          setLocCities((set) => {
+            const n = new Set(set);
+            n.has(label) ? n.delete(label) : n.add(label);
+            return n;
+          })
+        }
         kw={kw}
         setKw={setKw}
         availSources={availSources}
@@ -197,7 +223,7 @@ export function InboxTriage({ inbox }: { inbox: InboxJob[] }) {
         resultCount={filtered.length}
         totalCount={enriched.length - hiddenCount}
         anyActive={anyFacet}
-        onClear={() => { setWithin(null); setSources(new Set()); setSeniorities(new Set()); setLocQ(""); setKw(""); }}
+        onClear={() => { setWithin(null); setSources(new Set()); setSeniorities(new Set()); setLocCities(new Set()); setLocQ(""); setKw(""); }}
       />
 
       {/* batch header: fresh slice by default, or the full filtered set */}

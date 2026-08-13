@@ -1,4 +1,4 @@
-import { LayoutDashboard, ClipboardCheck, Compass, ListChecks, Send, Radar, BarChart3, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Compass, Briefcase, ListChecks, Send, Radar, BarChart3, FileText, Settings } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
 // Single source of truth for the app's primary destinations — shared by the
@@ -15,6 +15,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/", id: "today", label: "Today", icon: LayoutDashboard },
   { href: "/evaluate", id: "evaluate", label: "Evaluate", icon: ClipboardCheck },
   { href: "/explore", id: "explore", label: "Explore", icon: Compass, chip: "New" },
+  { href: "/hiring", id: "hiring", label: "Hiring", icon: Briefcase, chip: "New" },
   { href: "/pipeline", id: "pipeline", label: "Pipeline", icon: ListChecks },
   { href: "/followups", id: "followups", label: "Follow-ups", icon: Send },
   { href: "/portals", id: "portals", label: "Portals", icon: Radar },

@@ -104,6 +104,9 @@ export function TodayDashboard({
             <Link href="/explore" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:border-brand/40 hover:text-brand max-sm:min-h-[44px]">
               {t("today.ctaExplore")}
             </Link>
+            <Link href="/hiring" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:border-brand/40 hover:text-brand max-sm:min-h-[44px]">
+              {t("today.ctaHiring")}
+            </Link>
             <Link href="/pipeline" className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:border-brand/40 hover:text-brand max-sm:min-h-[44px]">
               {t("today.ctaPipeline")}
             </Link>

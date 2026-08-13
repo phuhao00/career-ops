@@ -4,6 +4,8 @@ import { useState } from "react";
 import { X, Ban, Clock, MapPin, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ATS_LABEL, ATS_SOURCES, cleanChips, type AtsSource, type ExploreFilters } from "@/lib/explore";
+import { CN_CITIES, citiesFromKeywords, expandLocationQuery } from "@/lib/cn-cities";
+import { useT } from "@/components/i18n/language-provider";
 
 const RECENCY = [
   { label: "24h", days: 1 },
@@ -107,8 +109,27 @@ export function FilterBuilder({
   onChange: (f: ExploreFilters) => void;
   seededFrom?: string[];
 }) {
+  const { t } = useT();
   const [advanced, setAdvanced] = useState(false);
   const set = (patch: Partial<ExploreFilters>) => onChange({ ...filters, ...patch });
+  const selectedCities = citiesFromKeywords([...filters.allow, ...filters.alwaysAllow]);
+  const toggleCity = (label: string) => {
+    let next: string[];
+    if (selectedCities.length === 1 && selectedCities[0] === label) {
+      next = []; // click the only city again → nationwide
+    } else if (selectedCities.length > 6) {
+      next = [label]; // seeded "all China" → first click narrows to this city
+    } else if (selectedCities.includes(label)) {
+      next = selectedCities.filter((c) => c !== label);
+    } else {
+      next = [...selectedCities, label];
+    }
+    const aliases = next.flatMap((c) => expandLocationQuery(c));
+    // City chips become the location allow-list. Empty = no city restriction
+    // (block list still applies). Drop leftover seeded "China"/"Remote" tokens
+    // so picking 深圳 actually means Shenzhen-only.
+    set({ allow: aliases, alwaysAllow: aliases });
+  };
   const toggleAts = (a: AtsSource) => {
     const has = filters.ats.includes(a);
     const next = has ? filters.ats.filter((x) => x !== a) : [...filters.ats, a];
@@ -120,23 +141,23 @@ export function FilterBuilder({
       <style>{STYLE}</style>
 
       <div>
-        <Label hint={filters.positive.length === 0 ? "empty = every fresh posting" : undefined}>Roles to find</Label>
-        <KeywordField values={filters.positive} tone="inc" placeholder="AI platform, ML infrastructure, staff engineer…" onChange={(v) => set({ positive: v })} />
+        <Label hint={filters.positive.length === 0 ? t("explore.rolesEmptyHint") : undefined}>{t("explore.roles")}</Label>
+        <KeywordField values={filters.positive} tone="inc" placeholder={t("explore.rolesPlaceholder")} onChange={(v) => set({ positive: v })} />
         {seededFrom.length > 0 && filters.positive.length > 0 && (
           <p className="mt-1 text-[11px] text-faint">Seeded from your {seededFrom.join(" + ")} — edit freely.</p>
         )}
       </div>
 
       <div>
-        <Label>Exclude</Label>
-        <KeywordField values={filters.negative} tone="exc" placeholder="manager, sales, contract…" onChange={(v) => set({ negative: v })} />
+        <Label>{t("explore.exclude")}</Label>
+        <KeywordField values={filters.negative} tone="exc" placeholder={t("explore.excludePlaceholder")} onChange={(v) => set({ negative: v })} />
       </div>
 
       <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
         <div>
-          <Label hint="postings published in this window">
+          <Label hint={t("explore.postedHint")}>
             <span className="inline-flex items-center gap-1.5">
-              <Clock className="size-3.5 text-muted" /> Posted within
+              <Clock className="size-3.5 text-muted" /> {t("explore.posted")}
             </span>
           </Label>
           <div className="inline-flex rounded-lg border border-border bg-surface/40 p-0.5">
@@ -157,7 +178,7 @@ export function FilterBuilder({
         </div>
 
         <div>
-          <Label hint={filters.ats.length === 0 ? "pick at least one" : undefined}>Sources</Label>
+          <Label hint={filters.ats.length === 0 ? t("explore.sourcesHint") : undefined}>{t("explore.sources")}</Label>
           <div className="flex flex-wrap gap-1.5">
             {ATS_SOURCES.map((a) => {
               const on = filters.ats.includes(a);
@@ -179,37 +200,63 @@ export function FilterBuilder({
         </div>
       </div>
 
+      <div>
+        <Label hint={t("explore.citiesHint")}>
+          <span className="inline-flex items-center gap-1.5">
+            <MapPin className="size-3.5 text-muted" /> {t("explore.cities")}
+          </span>
+        </Label>
+        <div className="flex flex-wrap gap-1.5">
+          {CN_CITIES.map((c) => {
+            const on = selectedCities.includes(c.label);
+            return (
+              <button
+                key={c.label}
+                type="button"
+                onClick={() => toggleCity(c.label)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors max-sm:min-h-[44px]",
+                  on ? "border-brand/40 bg-brand-soft text-brand" : "border-border text-muted hover:text-foreground",
+                )}
+              >
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={() => setAdvanced((v) => !v)}
         className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-foreground transition-colors max-sm:min-h-[44px]"
       >
         <SlidersHorizontal className="size-3.5" />
-        Location &amp; scope
+        {t("explore.locationScope")}
         <ChevronDown className={cn("size-3.5 transition-transform", advanced && "rotate-180")} />
       </button>
 
       {advanced && (
         <div className="space-y-3 rounded-xl border border-border bg-surface/30 p-3">
           <div className="flex items-center gap-1.5 text-[12px] text-muted">
-            <MapPin className="size-3.5" /> Location
+            <MapPin className="size-3.5" /> {t("explore.location")}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <Label hint="rescues multi-loc posts">Always include</Label>
-              <KeywordField values={filters.alwaysAllow} tone="inc" placeholder="London…" onChange={(v) => set({ alwaysAllow: v })} />
+              <Label hint={t("explore.alwaysHint")}>{t("explore.alwaysInclude")}</Label>
+              <KeywordField values={filters.alwaysAllow} tone="inc" placeholder={t("explore.alwaysPlaceholder")} onChange={(v) => set({ alwaysAllow: v })} />
             </div>
             <div>
-              <Label>Only in</Label>
-              <KeywordField values={filters.allow} tone="inc" placeholder="Remote, EMEA…" onChange={(v) => set({ allow: v })} />
+              <Label>{t("explore.onlyIn")}</Label>
+              <KeywordField values={filters.allow} tone="inc" placeholder={t("explore.onlyPlaceholder")} onChange={(v) => set({ allow: v })} />
             </div>
             <div>
-              <Label>Never in</Label>
-              <KeywordField values={filters.block} tone="exc" placeholder="India…" onChange={(v) => set({ block: v })} />
+              <Label>{t("explore.neverIn")}</Label>
+              <KeywordField values={filters.block} tone="exc" placeholder={t("explore.neverPlaceholder")} onChange={(v) => set({ block: v })} />
             </div>
           </div>
           <div>
-            <Label hint={`${filters.limitPerAts} companies / source`}>Scan depth</Label>
+            <Label hint={t("explore.depthHint", { n: filters.limitPerAts })}>{t("explore.depth")}</Label>
             <input
               type="range"
               min={50}
